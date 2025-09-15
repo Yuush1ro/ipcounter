@@ -7,6 +7,7 @@ import (
 	"math/bits"
 	"net"
 	"os"
+	"time"
 )
 
 type BitSet struct {
@@ -58,12 +59,13 @@ func processFile(filename string, bitset *BitSet) error {
 
 	scanner := bufio.NewScanner(file)
 
-	var processBytes int64
+	var processedBytes int64
 	var lastPrinted int64
+	start := time.Now()
 
 	for scanner.Scan() {
 		line := scanner.Text()
-		processBytes += int64(len(line)) + 1
+		processedBytes += int64(len(line)) + 1
 
 		ip := net.ParseIP(line)
 		if ip != nil {
@@ -73,25 +75,43 @@ func processFile(filename string, bitset *BitSet) error {
 			}
 		}
 
-		if processBytes-lastPrinted > 10*1024*1024 {
-			printProgress(processBytes, totalSize)
-			lastPrinted = processBytes
+		if processedBytes-lastPrinted > 10*1024*1024 {
+			printProgress(processedBytes, totalSize, start)
+			lastPrinted = processedBytes
 		}
 	}
 
-	printProgress(totalSize, totalSize)
+	printProgress(totalSize, totalSize, start)
 	fmt.Println()
 
 	return scanner.Err()
 }
 
-func printProgress(current, total int64) {
-	width := 50 // ширина прогресс-бара
+func printProgress(current, total int64, start time.Time) {
+	width := 50
 	percent := float64(current) / float64(total)
 	filled := int(percent * float64(width))
 
 	bar := "[" + string(repeat('#', filled)) + string(repeat('-', width-filled)) + "]"
-	fmt.Printf("\r%s %6.2f%%", bar, percent*100)
+
+	elapsed := time.Since(start)
+	eta := time.Duration(0)
+	if percent > 0 {
+		eta = time.Duration(float64(elapsed)/percent - float64(elapsed))
+	}
+
+	fmt.Printf("\r%s %6.2f%% | Elapsed: %s | ETA: %s",
+		bar, percent*100,
+		formatDuration(elapsed),
+		formatDuration(eta))
+}
+
+func formatDuration(d time.Duration) string {
+	secs := int(d.Seconds())
+	if secs < 60 {
+		return fmt.Sprintf("%ds", secs)
+	}
+	return fmt.Sprintf("%dm %ds", secs/60, secs%60)
 }
 
 func repeat(char rune, count int) []rune {
@@ -115,5 +135,5 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Printf("Unique IPs: %d\n", bitset.Count())
+	fmt.Printf("\nUnique IPs: %d\n", bitset.Count())
 }
