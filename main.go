@@ -66,7 +66,7 @@ func processFile(filename string, bitset *BitSet) error {
 		processBytes += int64(len(line)) + 1
 
 		ip := net.ParseIP(line)
-		if ip == nil {
+		if ip != nil {
 			val, err := ipToUint32(ip)
 			if err == nil {
 				bitset.Set(val)
