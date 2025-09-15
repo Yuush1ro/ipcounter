@@ -50,20 +50,56 @@ func processFile(filename string, bitset *BitSet) error {
 	}
 	defer file.Close()
 
+	info, err := file.Stat()
+	if err != nil {
+		return err
+	}
+	totalSize := info.Size()
+
 	scanner := bufio.NewScanner(file)
+
+	var processBytes int64
+	var lastPrinted int64
+
 	for scanner.Scan() {
 		line := scanner.Text()
+		processBytes += int64(len(line)) + 1
+
 		ip := net.ParseIP(line)
 		if ip == nil {
-			continue
+			val, err := ipToUint32(ip)
+			if err == nil {
+				bitset.Set(val)
+			}
 		}
-		val, err := ipToUint32(ip)
-		if err == nil {
-			bitset.Set(val)
+
+		if processBytes-lastPrinted > 10*1024*1024 {
+			printProgress(processBytes, totalSize)
+			lastPrinted = processBytes
 		}
 	}
 
+	printProgress(totalSize, totalSize)
+	fmt.Println()
+
 	return scanner.Err()
+}
+
+func printProgress(current, total int64) {
+	width := 50 // ширина прогресс-бара
+	percent := float64(current) / float64(total)
+	filled := int(percent * float64(width))
+
+	bar := "[" + string(repeat('#', filled)) + string(repeat('-', width-filled)) + "]"
+	fmt.Printf("\r%s %6.2f%%", bar, percent*100)
+}
+
+func repeat(char rune, count int) []rune {
+	res := make([]rune, count)
+	for i := range res {
+		res[i] = char
+	}
+	return res
 }
 
 func main() {
