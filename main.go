@@ -9,14 +9,11 @@ import (
 	"os"
 )
 
-// BitSet для хранения всех возможных IPv4 (2^32 бит = 512 МБ)
 type BitSet struct {
 	data []uint64
 }
 
-// Создаем BitSet на 2^32 элементов
 func NewBitSet() *BitSet {
-	// 2^32 / 64 = 67_108_864 элементов
 	size := uint64(1) << 32
 	words := size / 64
 	return &BitSet{
@@ -24,14 +21,12 @@ func NewBitSet() *BitSet {
 	}
 }
 
-// Установить бит
 func (b *BitSet) Set(n uint32) {
 	idx := n / 64
 	pos := n % 64
 	b.data[idx] |= 1 << pos
 }
 
-// Подсчет установленных битов (popcount через math/bits)
 func (b *BitSet) Count() uint64 {
 	var total uint64
 	for _, word := range b.data {
